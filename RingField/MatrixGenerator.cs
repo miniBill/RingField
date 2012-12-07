@@ -2,19 +2,19 @@
 
 namespace RingField {
     class MatrixGenerator : IEnumerable<Matrix> {
-        public Field Field {
+        private IField Field {
             get;
-            private set;
+            set;
         }
-        private int size;
+        private readonly int _size;
 
-        public MatrixGenerator(Field field, int size) {
+        public MatrixGenerator(IField field, int size) {
             Field = field;
-            this.size = size;
+            _size = size;
         }
 
         public IEnumerator<Matrix> GetEnumerator() {
-            int[,] curr = new int[size, size];
+            var curr = new int[_size, _size];
             while(true) {
                 yield return new Matrix(Field, (int[,])curr.Clone());
                 if(!Increment(curr))
@@ -23,8 +23,8 @@ namespace RingField {
         }
 
         private bool Increment(int[,] curr) {
-            for(int r = 0; r < size; r++)
-                for(int c = 0; c < size; c++) {
+            for(int r = 0; r < _size; r++)
+                for(int c = 0; c < _size; c++) {
                     curr[r, c] = Field.Add(curr[r, c], 1);
                     if(curr[r, c] != 0)
                         return true;

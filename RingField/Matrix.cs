@@ -2,40 +2,80 @@ using System;
 using System.Text;
 
 namespace RingField {
-    public class Matrix {
-        public Field Field {
+    public class Matrix : IEquatable<Matrix> {
+        public bool Equals(Matrix other) {
+            if(ReferenceEquals(null, other))
+                return false;
+            if(ReferenceEquals(this, other))
+                return true;
+            if(!Equals(Field, other.Field))
+                return false;
+            if(Rows != other.Rows || Columns != other.Columns)
+                return false;
+            for(int r=0;r<Rows;r++)
+                for(int c=0;c<Columns;c++)
+                    if(_values[r, c] != other._values[r, c])
+                        return false;
+            return true;
+        }
+
+        public override bool Equals(object obj) {
+            if(ReferenceEquals(null, obj))
+                return false;
+            if(ReferenceEquals(this, obj))
+                return true;
+            if(obj.GetType() != GetType())
+                return false;
+            return Equals((Matrix) obj);
+        }
+
+        public override int GetHashCode() {
+            unchecked {
+                return ((_values != null ? _values.GetHashCode() : 0) * 397) ^ (Field != null ? Field.GetHashCode() : 0);
+            }
+        }
+
+        public static bool operator ==(Matrix left, Matrix right) {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Matrix left, Matrix right) {
+            return !Equals(left, right);
+        }
+
+        private IField Field {
             get;
-            private set;
+            set;
         }
 
-        public int Rows {
+        private int Rows {
             get {
-                return values.GetLength(0);
+                return _values.GetLength(0);
             }
         }
 
-        public int Columns {
+        private int Columns {
             get {
-                return values.GetLength(1);
+                return _values.GetLength(1);
             }
         }
 
-        private int[,] values;
+        private readonly int[,] _values;
 
-        public Matrix(Field field, int[,] values) {
+        public Matrix(IField field, int[,] values) {
             Field = field;
-            this.values = values;
+            _values = values;
         }
 
-        public int Get(int row, int column) {
-            return values[row, column];
+        private int Get(int row, int column) {
+            return _values[row, column];
         }
 
         public static Matrix operator *(Matrix a, Matrix b) {
-            if(a.Columns != b.Rows || a.Field != b.Field)
+            if(a.Columns != b.Rows || !Equals(a.Field, b.Field))
                 throw new ArgumentException();
-            int[,] newvalues = new int[a.Rows, b.Columns];
-            Field field = a.Field;
+            var newvalues = new int[a.Rows, b.Columns];
+            IField field = a.Field;
             for(int r = 0; r < a.Rows; r++)
                 for(int c = 0; c < b.Columns; c++) {
                     int val = 0;
@@ -47,34 +87,21 @@ namespace RingField {
         }
 
         public static Matrix operator +(Matrix a, Matrix b) {
-            if(a.Rows != b.Rows || a.Columns != b.Columns || a.Field != b.Field)
+            if(a.Rows != b.Rows || a.Columns != b.Columns || !Equals(a.Field, b.Field))
                 throw new ArgumentException();
-            int[,] newvalues = new int[a.Rows, a.Columns];
-            Field field = a.Field;
+            var newvalues = new int[a.Rows, a.Columns];
+            IField field = a.Field;
             for(int r = 0; r < a.Rows; r++)
                 for(int c = 0; c < a.Columns; c++)
                     newvalues[r, c] = field.Add(a.Get(r, c), b.Get(r, c));
             return new Matrix(a.Field, newvalues);
         }
 
-        public override bool Equals(object obj) {
-            Matrix other = obj as Matrix;
-            if(other == null)
-                return false;
-            if(other.Rows != Rows || other.Columns != Columns)
-                return false;
-            for(int r = 0; r < Rows; r++)
-                for(int c = 0; c < Columns; c++)
-                    if(values[r, c] != other.values[r, c])
-                        return false;
-            return true;
-        }
-
         public override string ToString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             for(int r = 0; r < Rows; r++) {
                 for(int c = 0; c < Columns; c++) {
-                    sb.Append(values[r, c]);
+                    sb.Append(_values[r, c]);
                     if(c < Columns - 1)
                         sb.Append(' ');
                 }
@@ -90,22 +117,22 @@ namespace RingField {
             }
         }
 
-        public int Determinant {
+        private int Determinant {
             get {
                 if(Rows != Columns || Rows == 0)
                     throw new ArgumentException();
                 if(Rows == 1)
-                    return values[0, 0];
+                    return _values[0, 0];
                 if(Rows == 2)
-                    return Field.Subtract(Field.Multiply(values[0, 0], values[1, 1]), Field.Multiply(values[0, 1], values[1, 0]));
+                    return Field.Subtract(Field.Multiply(_values[0, 0], _values[1, 1]), Field.Multiply(_values[0, 1], _values[1, 0]));
                 if(Rows == 3) {
-                    int aei = Field.Multiply(values[0, 0], values[1, 1], values[2, 2]);
-                    int bfg = Field.Multiply(values[0, 1], values[1, 2], values[2, 0]);
-                    int cdh = Field.Multiply(values[0, 2], values[1, 0], values[2, 1]);
+                    int aei = Field.Multiply(_values[0, 0], _values[1, 1], _values[2, 2]);
+                    int bfg = Field.Multiply(_values[0, 1], _values[1, 2], _values[2, 0]);
+                    int cdh = Field.Multiply(_values[0, 2], _values[1, 0], _values[2, 1]);
 
-                    int ceg = Field.Multiply(values[0, 2], values[1, 1], values[2, 0]);
-                    int bdi = Field.Multiply(values[0, 1], values[1, 0], values[2, 2]);
-                    int afh = Field.Multiply(values[0, 0], values[1, 2], values[2, 1]);
+                    int ceg = Field.Multiply(_values[0, 2], _values[1, 1], _values[2, 0]);
+                    int bdi = Field.Multiply(_values[0, 1], _values[1, 0], _values[2, 2]);
+                    int afh = Field.Multiply(_values[0, 0], _values[1, 2], _values[2, 1]);
 
                     int left = Field.Add(aei, bfg, cdh);
                     int right = Field.Add(ceg, bdi, afh);
@@ -115,37 +142,18 @@ namespace RingField {
             }
         }
 
-        public static Matrix Identity(Field field, int size) {
-            if(size == 0)
-                throw new ArgumentOutOfRangeException();
-            int[,] idvalue = new int[size, size];
-            for(int j = 0; j < size; j++)
-                idvalue[j, j] = 1;
-            return new Matrix(field, idvalue);
-        }
-
-        public bool IsIdentity {
-            get {
-                for(int r = 0; r < Rows; r++)
-                    for(int c = 0; c < Columns; c++)
-                        if((r == c && values[r, c] != 1) || (r != c && values[r, c] != 0))
-                            return false;
-                return true;
-            }
-        }
-
         public bool IsZero {
             get {
                 for(int r = 0; r < Rows; r++)
                     for(int c = 0; c < Columns; c++)
-                        if(values[r, c] != 0)
+                        if(_values[r, c] != 0)
                             return false;
                 return true;
             }
         }
 
-        public static Matrix Zero(Field field, int size) {
-            int[,] idvalue = new int[size, size];
+        public static Matrix Zero(IField field, int size) {
+            var idvalue = new int[size, size];
             return new Matrix(field, idvalue);
         }
 
@@ -154,7 +162,7 @@ namespace RingField {
                 int toret = 0;
                 for(int r = 0; r < Rows; r++)
                     for(int c = 0; c < Columns; c++)
-                        if(values[r, c] != 0)
+                        if(_values[r, c] != 0)
                             toret++;
                 return toret;
             }
